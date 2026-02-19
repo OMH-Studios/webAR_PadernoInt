@@ -3,37 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Marca AR | Dark Mode & Ghosting</title>
+    <title>Mi Marca AR | Dark Mode</title>
+    
     <style>
-        /* Fondo general */
-        body {
-            margin: 0;
-            font-family: sans-serif;
-            background-color: #000000;
+        /* 1. Fondo general de la página en Negro */
+        body { 
+            margin: 0; 
+            font-family: sans-serif; 
+            background-color: #000000; 
         }
-
+        
+        /* 2. El contenedor con un degradado sutil para que se vea elegante */
         #container {
             width: 100vw;
             height: 100vh;
             background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
             overflow: hidden;
-            position: relative; 
         }
 
-        /* Logo */
+        /* 3. Logo blanco */
         .logo-top {
             position: absolute;
             top: 25px;
             left: 25px;
             width: 130px;
             z-index: 10;
+            /* Sombra suave para que el logo flote */
             filter: drop-shadow(0px 4px 8px rgba(255,255,255,0.1));
         }
 
-        /* Botón de AR principal */
+        /* 4. Botón de AR */
         #ar-button {
-            background-color: #ffffff;
-            color: #000000;
+            background-color: #ffffff; 
+            color: #000000;            
             border-radius: 50px;
             border: none;
             padding: 15px 30px;
@@ -53,166 +55,79 @@
 
         .ar-icon { width: 20px; height: 20px; fill: #000000; }
 
-        /* Visor 3D */
         model-viewer {
             width: 100%;
             height: 100%;
-            --poster-color: transparent;
-        }
-
-        /* Menú de Variaciones (Visible en AR) */
-        #variants-menu {
-            display: none; 
-            position: absolute;
-            bottom: 30px; 
-            left: 50%;
-            transform: translateX(-50%);
-            gap: 10px;
-            z-index: 100; 
-            width: max-content;
-        }
-
-        #variants-menu.show-in-ar {
-            display: flex;
-        }
-
-        .variant-btn {
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 20px;
-            padding: 10px 15px;
-            font-size: 14px;
-            backdrop-filter: blur(5px);
-            cursor: pointer;
-        }
-
-        .variant-btn.active {
-            background-color: white;
-            color: black;
-            font-weight: bold;
-        }
-
-        /* NUEVO: Instrucción visual para acomodar el modelo */
-        #ar-prompt {
-            display: none;
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            z-index: 100;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            pointer-events: none; /* Para que los toques lo atraviesen */
-        }
-
-        #ar-prompt.show {
-            display: block;
+            /* Hacemos que el fondo del visualizador sea transparente */
+            --poster-color: transparent; 
         }
     </style>
 </head>
 <body>
+
     <div id="container">
         <img src="logo.png" class="logo-top" alt="Logo Blanco">
 
         <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
         <model-viewer 
-            id="furniture-viewer"
+            id="mi-modelo"
             src="model.glb" 
-            ios-src="model.usdz" 
-            ar 
+            ios-src="model.usdz"
+            ar
             ar-modes="webxr scene-viewer quick-look" 
             camera-controls 
-            touch-action="pan-y" 
-            shadow-intensity="2" 
-            exposure="1" 
+            touch-action="pan-y"
+            shadow-intensity="2"
+            exposure="1"
             environment-image="neutral">
             
-            <div id="ar-prompt">Apunta al piso y toca para colocar</div>
-
-            <div id="variants-menu">
-                <button class="variant-btn active">Sala Modern</button>
-                <button class="variant-btn">Comedor Lux</button>
-                <button class="variant-btn">Home Office</button>
-            </div>
-
             <button slot="ar-button" id="ar-button">
                 <svg class="ar-icon" viewBox="0 0 24 24"><path d="M19 12h-2v3H7v-3H5v5h14v-5zM12 9V5.41l1.29 1.3 1.42-1.42L12 2.58 9.29 5.29l1.42 1.42L12 5.41V9H5v2h14V9h-7z"/></svg>
                 VER EN MI ESPACIO
             </button>
+
         </model-viewer>
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const modelViewer = document.getElementById('furniture-viewer');
-            const variantsMenu = document.getElementById('variants-menu');
-            const variantButtons = document.querySelectorAll('.variant-btn');
-            const arPrompt = document.getElementById('ar-prompt');
+        const modelViewer = document.querySelector('#mi-modelo');
+        const originalColors = new Map();
 
-            // 1. Manejo del estado de AR (Fantasma e Instrucciones)
-            modelViewer.addEventListener('ar-status', (event) => {
-                if (event.detail.status === 'session-started') {
-                    // Modo AR iniciado: Mostramos botones, mensaje y modelo fantasma
-                    variantsMenu.classList.add('show-in-ar');
-                    arPrompt.classList.add('show');
-                    setMaterialOpacity(0.4); 
-                    
-                } else if (event.detail.status === 'object-placed') {
-                    // Modelo fijado en el piso: Ocultamos mensaje y devolvemos opacidad
-                    arPrompt.classList.remove('show');
-                    setMaterialOpacity(1.0); 
-                    
-                } else if (event.detail.status === 'not-presenting') {
-                    // Salimos del AR: Ocultamos todo lo de AR y devolvemos opacidad a 100%
-                    variantsMenu.classList.remove('show-in-ar');
-                    arPrompt.classList.remove('show');
-                    setMaterialOpacity(1.0); 
-                }
+        // 1. Cuando el modelo carga en la web, lo hacemos semi-transparente
+        modelViewer.addEventListener('load', () => {
+            const materials = modelViewer.model.materials;
+            
+            materials.forEach((material, index) => {
+                // Guardamos el color y opacidad originales
+                const baseColor = material.pbrMetallicRoughness.baseColorFactor;
+                originalColors.set(index, baseColor);
+                
+                // Aplicamos el efecto fantasma (Alpha a 0.3 = 30% de opacidad)
+                // baseColorFactor es un array [R, G, B, Alpha]
+                material.pbrMetallicRoughness.setBaseColorFactor([baseColor[0], baseColor[1], baseColor[2], 0.3]);
+                
+                // Cambiamos el modo de mezcla para permitir la transparencia
+                material.setAlphaMode('BLEND');
             });
+        });
 
-            // 2. Lógica visual de los botones (Solo cambian de color, sin cambiar modelo)
-            variantButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault(); 
-                    e.stopPropagation();
-
-                    // Solo quitamos y ponemos la clase 'active' para que se vea el cambio
-                    variantButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    
-                    // Aquí iría la lógica de cambio de modelo más adelante
-                });
-            });
-
-            // 3. Función para cambiar transparencia
-            function setMaterialOpacity(alpha) {
-                try {
-                    if (!modelViewer.model || !modelViewer.model.materials) return;
-                    
-                    const materials = modelViewer.model.materials;
-                    for (let material of materials) {
-                        if (material.pbrMetallicRoughness) {
-                            const baseColor = material.pbrMetallicRoughness.baseColorFactor;
-                            // Modificamos solo el canal Alpha (transparencia)
-                            material.pbrMetallicRoughness.setBaseColorFactor([baseColor[0], baseColor[1], baseColor[2], alpha]);
-                            // Cambiamos el modo de renderizado
-                            material.setAlphaMode(alpha < 1.0 ? 'BLEND' : 'OPAQUE');
-                        }
+        // 2. Cuando el usuario entra a AR, restauramos la solidez del modelo
+        modelViewer.addEventListener('ar-status', (event) => {
+            // 'session-started' significa que la cámara de AR se activó
+            if (event.detail.status === 'session-started') {
+                const materials = modelViewer.model.materials;
+                
+                materials.forEach((material, index) => {
+                    const originalColor = originalColors.get(index);
+                    if (originalColor) {
+                        // Restauramos el color y opacidad originales
+                        material.pbrMetallicRoughness.setBaseColorFactor(originalColor);
                     }
-                } catch (error) {
-                    console.log("Esperando a que los materiales carguen...");
-                }
+                });
             }
         });
     </script>
+
 </body>
 </html>
