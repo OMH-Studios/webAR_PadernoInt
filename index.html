@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Marca AR | Dark Mode & Variaciones</title>
+    <title>Mi Marca AR | Dark Mode & Ghosting</title>
     <style>
-        /* 1. Fondo general */
+        /* Fondo general */
         body {
             margin: 0;
             font-family: sans-serif;
@@ -20,7 +20,7 @@
             position: relative; 
         }
 
-        /* 2. Logo */
+        /* Logo */
         .logo-top {
             position: absolute;
             top: 25px;
@@ -30,7 +30,7 @@
             filter: drop-shadow(0px 4px 8px rgba(255,255,255,0.1));
         }
 
-        /* 3. Botón de AR principal (Visible al inicio) */
+        /* Botón de AR principal */
         #ar-button {
             background-color: #ffffff;
             color: #000000;
@@ -53,26 +53,25 @@
 
         .ar-icon { width: 20px; height: 20px; fill: #000000; }
 
-        /* 4. Visor 3D */
+        /* Visor 3D */
         model-viewer {
             width: 100%;
             height: 100%;
             --poster-color: transparent;
         }
 
-        /* 5. Menú de Variaciones (Oculto por defecto con display: none) */
+        /* Menú de Variaciones (Visible en AR) */
         #variants-menu {
-            display: none; /* <-- Clave: Oculto en la interfaz principal */
+            display: none; 
             position: absolute;
-            bottom: 30px; /* Se posiciona en la parte inferior durante el AR */
+            bottom: 30px; 
             left: 50%;
             transform: translateX(-50%);
             gap: 10px;
-            z-index: 100; /* Asegura que esté por encima de la cámara */
+            z-index: 100; 
             width: max-content;
         }
 
-        /* Clase para mostrar el menú usando JavaScript */
         #variants-menu.show-in-ar {
             display: flex;
         }
@@ -92,6 +91,30 @@
             background-color: white;
             color: black;
             font-weight: bold;
+        }
+
+        /* NUEVO: Instrucción visual para acomodar el modelo */
+        #ar-prompt {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none; /* Para que los toques lo atraviesen */
+        }
+
+        #ar-prompt.show {
+            display: block;
         }
     </style>
 </head>
@@ -113,10 +136,12 @@
             exposure="1" 
             environment-image="neutral">
             
+            <div id="ar-prompt">Apunta al piso y toca para colocar</div>
+
             <div id="variants-menu">
-                <button class="variant-btn active" data-src="sala_moderna.glb" data-ios-src="sala_moderna.usdz">Sala Modern</button>
-                <button class="variant-btn" data-src="comedor_lux.glb" data-ios-src="comedor_lux.usdz">Comedor Lux</button>
-                <button class="variant-btn" data-src="home_office.glb" data-ios-src="home_office.usdz">Home Office</button>
+                <button class="variant-btn active">Sala Modern</button>
+                <button class="variant-btn">Comedor Lux</button>
+                <button class="variant-btn">Home Office</button>
             </div>
 
             <button slot="ar-button" id="ar-button">
@@ -131,42 +156,44 @@
             const modelViewer = document.getElementById('furniture-viewer');
             const variantsMenu = document.getElementById('variants-menu');
             const variantButtons = document.querySelectorAll('.variant-btn');
+            const arPrompt = document.getElementById('ar-prompt');
 
-            // 1. Mostrar/Ocultar el menú de variantes según el estado del AR
+            // 1. Manejo del estado de AR (Fantasma e Instrucciones)
             modelViewer.addEventListener('ar-status', (event) => {
                 if (event.detail.status === 'session-started') {
-                    // Entró en modo AR (Cámara encendida) -> Mostramos los botones
+                    // Modo AR iniciado: Mostramos botones, mensaje y modelo fantasma
                     variantsMenu.classList.add('show-in-ar');
-                    setMaterialOpacity(0.5); // Efecto fantasma antes de colocar
+                    arPrompt.classList.add('show');
+                    setMaterialOpacity(0.4); 
                     
                 } else if (event.detail.status === 'object-placed') {
-                    // El usuario tocó la pantalla y colocó el mueble en el piso
-                    setMaterialOpacity(1.0); // Opacidad completa
+                    // Modelo fijado en el piso: Ocultamos mensaje y devolvemos opacidad
+                    arPrompt.classList.remove('show');
+                    setMaterialOpacity(1.0); 
                     
                 } else if (event.detail.status === 'not-presenting') {
-                    // Salió del modo AR de vuelta a la web -> Ocultamos los botones
+                    // Salimos del AR: Ocultamos todo lo de AR y devolvemos opacidad a 100%
                     variantsMenu.classList.remove('show-in-ar');
-                    setMaterialOpacity(1.0); // Aseguramos que se vea normal en la web
+                    arPrompt.classList.remove('show');
+                    setMaterialOpacity(1.0); 
                 }
             });
 
-            // 2. Lógica para cambiar de modelo al presionar un botón
+            // 2. Lógica visual de los botones (Solo cambian de color, sin cambiar modelo)
             variantButtons.forEach(button => {
                 button.addEventListener('click', (e) => {
-                    // Evitar que el clic en el botón se interprete como un clic en el espacio 3D
                     e.preventDefault(); 
                     e.stopPropagation();
 
+                    // Solo quitamos y ponemos la clase 'active' para que se vea el cambio
                     variantButtons.forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
-
-                    // Cambiamos el archivo 3D
-                    modelViewer.src = button.getAttribute('data-src');
-                    modelViewer.iosSrc = button.getAttribute('data-ios-src');
+                    
+                    // Aquí iría la lógica de cambio de modelo más adelante
                 });
             });
 
-            // 3. Función segura para cambiar la transparencia (Efecto fantasma)
+            // 3. Función para cambiar transparencia
             function setMaterialOpacity(alpha) {
                 try {
                     if (!modelViewer.model || !modelViewer.model.materials) return;
@@ -175,12 +202,14 @@
                     for (let material of materials) {
                         if (material.pbrMetallicRoughness) {
                             const baseColor = material.pbrMetallicRoughness.baseColorFactor;
+                            // Modificamos solo el canal Alpha (transparencia)
                             material.pbrMetallicRoughness.setBaseColorFactor([baseColor[0], baseColor[1], baseColor[2], alpha]);
+                            // Cambiamos el modo de renderizado
                             material.setAlphaMode(alpha < 1.0 ? 'BLEND' : 'OPAQUE');
                         }
                     }
                 } catch (error) {
-                    console.log("Aún cargando materiales o modelo no compatible con cambio de opacidad dinámico.");
+                    console.log("Esperando a que los materiales carguen...");
                 }
             }
         });
