@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inmobiliaria AR | Configurador</title>
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+    <style>
+        body { margin: 0; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        #container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+
+        /* Estilo del Logo */
+        .logo-top {
+            position: absolute;
+            top: 25px; left: 25px;
+            width: 120px;
+            z-index: 10;
+            filter: drop-shadow(0px 4px 8px rgba(255,255,255,0.2));
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            --poster-color: transparent;
+        }
+
+        /* 1. Botón Principal de Realidad Aumentada */
+        #ar-button {
+            background-color: #ffffff;
+            color: #000;
+            border-radius: 30px;
+            border: none;
+            padding: 12px 24px;
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        /* 2. Interfaz de Cambio de Mobiliario (Selector) */
+        .controls {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 30;
+        }
+
+        .btn-mueble {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-mueble:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 3. El "Reticle" o Guía de colocación */
+        /* Nota: Model-viewer maneja esto internamente con el atributo 'ar-placement="floor"' */
+        
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <img src="logo.png" class="logo-top" alt="Logo">
+
+    <div class="controls">
+        <button class="btn-mueble" onclick="switchModel('sala')">Sala Modern</button>
+        <button class="btn-mueble" onclick="switchModel('comedor')">Comedor Lux</button>
+        <button class="btn-mueble" onclick="switchModel('oficina')">Home Office</button>
+    </div>
+
+    <model-viewer 
+        id="mueble-viewer"
+        src="model_1.glb" 
+        ios-src="model_1.usdz"
+        ar 
+        ar-modes="webxr scene-viewer quick-look" 
+        ar-placement="floor"
+        camera-controls 
+        touch-action="pan-y" 
+        shadow-intensity="1.5" 
+        shadow-softness="1"
+        exposure="1.2"
+        environment-image="neutral">
+
+        <button slot="ar-button" id="ar-button">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M7 11V7L11 3L15 7V11H7M11 1L6 6V11H2V23H22V11H18V6L13 1H11Z"/></svg>
+            UBICAR EN MI CASA
+        </button>
+
+        <div slot="ar-prompt" id="ar-prompt">
+            <img src="https://modelviewer.dev/shared-assets/icons/hand.png" alt="Mueve el celular">
+        </div>
+    </model-viewer>
+</div>
+
+<script>
+    const modelViewer = document.querySelector("#mueble-viewer");
+
+    /**
+     * Función para cambiar modelos
+     * En un proyecto real, aquí actualizarías los paths .glb y .usdz
+     */
+    function switchModel(tipo) {
+        console.log("Cambiando a mobiliario: " + tipo);
+        
+        // Ejemplo de cómo cambiarías las fuentes:
+        // if(tipo === 'sala') {
+        //    modelViewer.src = 'sala.glb';
+        //    modelViewer.iosSrc = 'sala.usdz';
+        // }
+        
+        alert("Cambiando a: " + tipo + ". (Asegúrate de tener los archivos listos)");
+    }
+
+    /**
+     * Lógica de Opacidad para Colocación:
+     * Model-viewer por defecto muestra una sombra/fantasma antes de colocar.
+     * Podemos forzar estados visuales escuchando eventos de AR.
+     */
+    modelViewer.addEventListener('ar-status', (event) => {
+        if(event.detail.status === 'session-started'){
+            // El usuario entró a la cámara AR
+            // El modelo suele verse semi-transparente hasta que se detecta el plano
+            console.log("Sesión AR iniciada: Buscando suelo...");
+        } else if (event.detail.status === 'object-placed') {
+            // El usuario tocó la pantalla y colocó el mueble
+            console.log("Mueble colocado con éxito");
+        }
+    });
+</script>
+
+</body>
+</html>
