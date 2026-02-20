@@ -6,34 +6,32 @@
     <title>Mi Marca AR | Dark Mode</title>
     
     <style>
-        /* 1. Fondo general de la página en Negro */
+        /* 1. Fondo general */
         body { 
             margin: 0; 
             font-family: sans-serif; 
             background-color: #000000; 
         }
         
-        /* 2. El contenedor con un degradado sutil para que se vea elegante */
         #container {
             width: 100vw;
             height: 100vh;
             background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
             overflow: hidden;
+            position: relative; /* Necesario para posicionar elementos encima */
         }
 
-        /* 3. Logo blanco */
         .logo-top {
             position: absolute;
             top: 25px;
             left: 25px;
             width: 130px;
             z-index: 10;
-            /* Sombra suave para que el logo flote */
             filter: drop-shadow(0px 4px 8px rgba(255,255,255,0.1));
         }
 
-        /* 4. Botón de AR */
-        #ar-button {
+        /* 2. Botón de AR (Ahora vive fuera del model-viewer) */
+        #mi-boton-ar {
             background-color: #ffffff; 
             color: #000000;            
             border-radius: 50px;
@@ -41,7 +39,7 @@
             padding: 15px 30px;
             font-size: 14px;
             font-weight: bold;
-            position: absolute;
+            position: absolute; 
             bottom: 50px;
             left: 50%;
             transform: translateX(-50%);
@@ -55,11 +53,15 @@
 
         .ar-icon { width: 20px; height: 20px; fill: #000000; }
 
+        /* 3. El visualizador 3D con el efecto fantasma en CSS */
         model-viewer {
             width: 100%;
             height: 100%;
-            /* Hacemos que el fondo del visualizador sea transparente */
             --poster-color: transparent; 
+            
+            /* Aquí creamos el efecto fantasma sin afectar el rendimiento 3D */
+            opacity: 0.35; 
+            transition: opacity 0.4s ease-in-out; /* Animación suave al volverse sólido */
         }
     </style>
 </head>
@@ -82,49 +84,34 @@
             exposure="1"
             environment-image="neutral">
             
-            <button slot="ar-button" id="ar-button">
-                <svg class="ar-icon" viewBox="0 0 24 24"><path d="M19 12h-2v3H7v-3H5v5h14v-5zM12 9V5.41l1.29 1.3 1.42-1.42L12 2.58 9.29 5.29l1.42 1.42L12 5.41V9H5v2h14V9h-7z"/></svg>
-                VER EN MI ESPACIO
-            </button>
+            <div slot="ar-button" style="display: none;"></div>
 
         </model-viewer>
+
+        <button id="mi-boton-ar">
+            <svg class="ar-icon" viewBox="0 0 24 24"><path d="M19 12h-2v3H7v-3H5v5h14v-5zM12 9V5.41l1.29 1.3 1.42-1.42L12 2.58 9.29 5.29l1.42 1.42L12 5.41V9H5v2h14V9h-7z"/></svg>
+            VER EN MI ESPACIO
+        </button>
     </div>
 
     <script>
-        const modelViewer = document.querySelector('#mi-modelo');
-        const originalColors = new Map();
+        const miBotonAR = document.getElementById('mi-boton-ar');
+        const modelViewer = document.getElementById('mi-modelo');
 
-        // 1. Cuando el modelo carga en la web, lo hacemos semi-transparente
-        modelViewer.addEventListener('load', () => {
-            const materials = modelViewer.model.materials;
+        // 1. Al presionar el botón, quitamos la transparencia y abrimos la cámara
+        miBotonAR.addEventListener('click', () => {
             
-            materials.forEach((material, index) => {
-                // Guardamos el color y opacidad originales
-                const baseColor = material.pbrMetallicRoughness.baseColorFactor;
-                originalColors.set(index, baseColor);
-                
-                // Aplicamos el efecto fantasma (Alpha a 0.3 = 30% de opacidad)
-                // baseColorFactor es un array [R, G, B, Alpha]
-                material.pbrMetallicRoughness.setBaseColorFactor([baseColor[0], baseColor[1], baseColor[2], 0.3]);
-                
-                // Cambiamos el modo de mezcla para permitir la transparencia
-                material.setAlphaMode('BLEND');
-            });
+            // Volvemos el modelo 100% sólido justo antes de entrar a AR
+            modelViewer.style.opacity = '1';
+            
+            // Le ordenamos al model-viewer que lance la experiencia AR
+            modelViewer.activateAR();
         });
 
-        // 2. Cuando el usuario entra a AR, restauramos la solidez del modelo
+        // 2. Si el usuario cierra la cámara y regresa a la web, restauramos el fantasma
         modelViewer.addEventListener('ar-status', (event) => {
-            // 'session-started' significa que la cámara de AR se activó
-            if (event.detail.status === 'session-started') {
-                const materials = modelViewer.model.materials;
-                
-                materials.forEach((material, index) => {
-                    const originalColor = originalColors.get(index);
-                    if (originalColor) {
-                        // Restauramos el color y opacidad originales
-                        material.pbrMetallicRoughness.setBaseColorFactor(originalColor);
-                    }
-                });
+            if (event.detail.status === 'not-presenting') {
+                modelViewer.style.opacity = '0.35';
             }
         });
     </script>
